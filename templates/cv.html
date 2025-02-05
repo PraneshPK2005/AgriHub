@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glassmorphism Boxes - Half Page Width</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Reset and global styles */
+        *,
+        *:before,
+        *:after {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color:#8DECB4;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .background {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 80%; /* Adjusted width */
+            height: 80vh; /* 80% of viewport height */
+            position: absolute;
+            top: 10%; /* Adjusted top position */
+        }
+
+        .box {
+            width: 30%; /* Adjusted width for three boxes */
+            height: 90%; /* Adjusted height */
+            margin: 0 10px; /* Adjusted spacing */
+            background-color: #FEFBF3; /* Transparent white */
+            border-radius: 20px;
+            backdrop-filter: blur(10px); /* Glass morphism effect */
+            transition: transform 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* Align text at the bottom */
+            align-items: center;
+            padding-bottom: 20px; /* Padding at the bottom */
+            margin: 0 50px;
+        }
+
+        .box:hover {
+            transform: scale(1.1);
+        }
+
+        .box img {
+            width: 50%; /* Adjusted image size */
+            height: 50%; /* Adjusted image size */
+            margin-bottom: 90px; /* Reduced margin for image */
+        }
+
+        .box a {
+            padding: 10px; /* Adjusted padding */
+            color: rgb(21, 21, 22);
+            text-decoration: none; /* Removes the underline */
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600; /* Adjusted font weight */
+            font-size: 20px; /* Adjusted font size */
+            margin-bottom: 50px;
+        }
+
+        .text-box {
+            width: 100%;
+            text-align: center;
+        }
+
+        .message {
+            position: absolute;
+            bottom: 20px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .message p {
+            font-size: 14px;
+            color: #f5f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="background">
+        <!-- Background shapes or images -->
+    </div>
+    <div class="container">
+        <div class="box">
+            <img src="\static\images\weed.jpeg" alt="weed detection">
+            <div class="text-box">
+                <a href="{{ url_for('weedbase') }}">Weed Detection</a>
+            </div>
+        </div>
+        <div class="box">
+            <img src="\static\images\leaf.jpeg" alt="Leaf Disease Detection">
+            <div class="text-box">
+                <a href="{{ url_for('leafbase') }}">leaf detection</a>
+            </div>
+        </div>
+        <div class="box">
+            <img src="\static\images\apple_counting_logo.jpg" alt="apple counting">
+            <div class="text-box">
+                <a href="{{ url_for('countbase') }}">apple count</a>
+            </div>
+        </div>
+    </div>
+
+    </div>
+</body>
+</html>

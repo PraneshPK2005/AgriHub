@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hugging Face Products</title>
+    <style>
+      /* Reset and Styling */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 20px auto;
+        display: flex;
+      }
+
+      .sidebar {
+        flex: 0 0 25%;
+        background-color: #ffffff;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .products {
+        flex: 0 0 75%;
+        padding: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+      }
+
+      .product {
+        width: calc(33.33% - 20px);
+        margin: 0 20px 20px 0;
+        padding: 15px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        position: relative;
+      }
+
+      .product-image {
+        text-align: center;
+        margin-bottom: 10px;
+      }
+
+      .product-image img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+      }
+
+      .product-details {
+        text-align: center;
+      }
+
+      .product-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      .product-category {
+        font-size: 14px;
+        color: #9ca3af;
+        margin-bottom: 5px;
+      }
+
+      .product-price {
+        font-size: 16px;
+        color: #4caf50;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      .product-description {
+        font-size: 14px;
+        color: #555555;
+        margin-bottom: 10px;
+      }
+
+      /* Contact Seller Button */
+      .contact-btn {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      /* Popup Modal */
+      .popup-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .popup {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        width: 300px;
+        text-align: center;
+        position: relative;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 18px;
+        cursor: pointer;
+        color: red;
+      }
+
+      /* Blur effect when popup is open */
+      .blurred {
+        filter: blur(5px);
+        pointer-events: none;
+      }
+
+      /* Styling for search and sort */
+      .search {
+        margin-bottom: 20px;
+      }
+
+      .search input {
+        width: calc(100% - 100px);
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px 0 0 4px;
+        font-size: 14px;
+      }
+
+      .search button {
+        width: 80px;
+        padding: 10px;
+        background-color: #4caf50;
+        color: #ffffff;
+        border: none;
+        border-radius: 0 4px 4px 0;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 20px;
+      }
+
+      .filters,
+      .sorting {
+        margin-bottom: 20px;
+      }
+
+      .filters h2,
+      .sorting h2 {
+        margin-bottom: 10px;
+        font-size: 16px;
+        font-weight: bold;
+      }
+
+      .filters label {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .filters select,
+      .sorting select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <!-- Sidebar for Filters and Sorting -->
+      <aside class="sidebar">
+        <form method="get" action="/storepage">
+          <div class="search">
+            <input
+              type="text"
+              name="search"
+              id="search-input"
+              value="{{ search_term }}"
+              placeholder="Search products..."
+              oninput="liveSearch()"
+            />
+          </div>
+        </form>
+
+        <form method="get" action="/storepage">
+          <div class="filters">
+            <h2>Filters</h2>
+            <label for="category">Category:</label>
+            <select id="category" name="category" onchange="liveSearch()">
+              <option value="all" {% if category_filter == 'all' %}selected{% endif %}>All</option>
+              <option value="crop" {% if category_filter == 'crop' %}selected{% endif %}>Crop</option>
+              <option value="machinery" {% if category_filter == 'machinery' %}selected{% endif %}>Machinery</option>
+              <option value="fertilizers" {% if category_filter == 'fertilizers' %}selected{% endif %}>Fertilizers</option>
+              <option value="husbandry" {% if category_filter == 'husbandry' %}selected{% endif %}>Husbandry</option>
+              <option value="rental" {% if category_filter == 'rental' %}selected{% endif %}>Rental</option>
+            </select>
+          </div>
+
+          <div class="sorting">
+            <h2>Sort By</h2>
+            <select id="sort" name="sort" onchange="liveSearch()">
+              <option value="default" {% if sort_by == 'default' %}selected{% endif %}>Default</option>
+              <option value="price-low" {% if sort_by == 'price-low' %}selected{% endif %}>Price: Low to High</option>
+              <option value="price-high" {% if sort_by == 'price-high' %}selected{% endif %}>Price: High to Low</option>
+              <option value="name-a-z" {% if sort_by == 'name-a-z' %}selected{% endif %}>Name: A to Z</option>
+              <option value="name-z-a" {% if sort_by == 'name-z-a' %}selected{% endif %}>Name: Z to A</option>
+            </select>
+          </div>
+        </form>
+      </aside>
+
+      <!-- Product Listings -->
+      <section class="products" id="product-container">
+        {% for product in products %}
+        <div class="product">
+          <div class="product-image">
+            <img src="{{ product.image_path }}" alt="{{ product.product_name }}" />
+          </div>
+          <div class="product-details">
+            <h3 class="product-title">{{ product.product_name }}</h3>
+            <p class="product-category">Category: {{ product.product_category }}</p>
+            <p class="product-price">${{ product.price }}</p>
+            <p class="product-description">{{ product.description }}</p>
+            <button class="contact-btn" onclick="openPopup('{{ product.product_name }}')">Contact Seller</button>
+          </div>
+        </div>
+        {% endfor %}
+      </section>
+    </div>
+
+    <!-- Popup Modal -->
+    <div class="popup-container" id="popup-container">
+      <div class="popup">
+        <span class="close-btn" onclick="closePopup()">&times;</span>
+        <h2>Seller Details</h2>
+        <p><strong>Name:</strong> <span id="seller-name"></span></p>
+        <p><strong>Email:</strong> <span id="seller-email"></span></p>
+        <p><strong>Contact:</strong> <span id="seller-contact"></span></p>
+        <p><strong>Address:</strong> <span id="seller-address"></span></p>
+      </div>
+    </div>
+
+    <script>
+      function openPopup(productName) {
+        document.body.classList.add("blurred");
+
+        // Fetch seller details based on product name
+        fetch(`/get_seller_info?product_name=${productName}`)
+          .then(response => response.json())
+          .then(data => {
+            document.getElementById("seller-name").innerText = data.name;
+            document.getElementById("seller-email").innerText = data.email;
+            document.getElementById("seller-contact").innerText = data.contact_number;
+            document.getElementById("seller-address").innerText = data.locality_address;
+
+            document.getElementById("popup-container").style.display = "flex";
+          });
+      }
+
+      function closePopup() {
+        document.body.classList.remove("blurred");
+        document.getElementById("popup-container").style.display = "none";
+      }
+
+      function liveSearch() {
+        const searchTerm = document.getElementById("search-input").value;
+        const category = document.getElementById("category").value;
+        const sort = document.getElementById("sort").value;
+
+        const params = new URLSearchParams();
+        params.append('search', searchTerm);
+        params.append('category', category);
+        params.append('sort', sort);
+
+        fetch('/storepage?' + params.toString())
+          .then((response) => response.json())
+          .then((data) => {
+            const productContainer = document.getElementById("product-container");
+            productContainer.innerHTML = '';
+
+            data.products.forEach((product) => {
+              const productElement = `
+                <div class="product">
+                  <div class="product-image">
+                    <img src="${product.image_path}" alt="${product.product_name}" />
+                  </div>
+                  <div class="product-details">
+                    <h3 class="product-title">${product.product_name}</h3>
+                    <p class="product-category">Category: ${product.product_category}</p>
+                    <p class="product-price">$${product.price}</p>
+                    <p class="product-description">${product.description}</p>
+                    <button class="contact-btn" onclick="openPopup('${product.product_name}')">Contact Seller</button>
+                  </div>
+                </div>
+              `;
+              productContainer.innerHTML += productElement;
+            });
+          });
+      }
+    </script>
+  </body>
+</html>
