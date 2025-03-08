@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Insta-like Agriculture Dashboard</title>
+    <style>
+      body {
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  box-sizing: border-box;
+}
+
+/* Left Sidebar (Weather Section) */
+.left-sidebar {
+  width: 25%; /* Keep space for weather */
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #fff;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* Center Column (News Section) */
+.center-column {
+  width: 75%; /* Takes the remaining space */
+  padding: 20px;
+  box-sizing: border-box;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Post box styling */
+/* Post box styling */
+.post-box {
+  width: 90%;
+  max-width: 600px;
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  display: flex;  /* Align items in a row */
+  align-items: center;  /* Align items vertically */
+  gap: 15px; /* Add spacing between image and text */
+  transition: transform 0.2s ease-in-out;
+}
+
+.post-box:hover {
+  transform: translateY(-5px);
+}
+
+/* News images */
+.post-box img {
+  width: 120px;  /* Set fixed width for image */
+  height: 100px;  /* Set fixed height for consistency */
+  border-radius: 10px;
+  object-fit: cover; /* Ensures the image fills the space */
+}
+
+/* News content container */
+.post-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-grow: 1; /* Ensures content takes remaining space */
+}
+
+/* News title */
+.post-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.post-title a {
+  text-decoration: none;
+  color: #007bff;
+}
+
+.post-title a:hover {
+  color: #0056b3;
+}
+
+/* Published Date */
+.post-time {
+  font-size: 12px;
+  color: #888;
+  margin-top: 5px;
+}
+
+/* Description */
+.post-description {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.4;
+  margin-top: 5px;
+}
+
+
+
+      .dropdown-container {
+        position: relative;
+        margin-bottom: 20px;
+      }
+      .search-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .dropdown-list {
+        width: 100%;
+        max-height: 200px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        position: absolute;
+        display: none;
+        z-index: 1000;
+      }
+      .dropdown-list div {
+        padding: 10px;
+        cursor: pointer;
+      }
+      .dropdown-list div:hover {
+        background: #f2f2f2;
+      }
+      .search-btn {
+        margin-top: 10px;
+        width: 100%;
+        padding: 10px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .search-btn:hover {
+        background: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Left Sidebar (Weather Section) -->
+      <div class="left-sidebar">
+        <div class="sidebar-section">
+          <h3>Select City for Checking Weather</h3>
+          <div class="dropdown-container">
+            <input
+              type="text"
+              id="citySearch"
+              class="search-input"
+              placeholder="Search city..."
+              onfocus="showAllCities()"
+              onkeyup="filterCities()"
+            />
+            <div id="cityDropdown" class="dropdown-list"></div>
+          </div>
+          <button class="search-btn" onclick="searchWeather()">Search</button>
+        </div>
+  
+        <div class="sidebar-section">
+          <h3>Weather Info for {{ city }}</h3>
+  
+          {% if weather_data %}
+          <ul>
+            <li><strong>Max Temp:</strong> {{ weather_data['weather']['current']['temperature']['max']['value'] }}°C</li>
+            <li><strong>Min Temp:</strong> {{ weather_data['weather']['current']['temperature']['min']['value'] }}°C</li>
+            <li>
+              <strong>Humidity:</strong> Morning - {{ weather_data['weather']['current']['humidity']['morning'] }}%, 
+              Evening - {{ weather_data['weather']['current']['humidity']['evening'] }}%
+            </li>
+            <li><strong>Sunrise:</strong> {{ weather_data['weather']['astronomical']['sunrise'] }}</li>
+            <li><strong>Sunset:</strong> {{ weather_data['weather']['astronomical']['sunset'] }}</li>
+          </ul>
+  
+          <h4>7-Day Forecast</h4>
+          <ul>
+            {% for forecast in weather_data['weather']['forecast'] %}
+            <li>
+              <strong>{{ forecast['date'] }}:</strong> {{ forecast['description'] }} 
+              ({{ forecast['min_temp'] }}°C - {{ forecast['max_temp'] }}°C)
+            </li>
+            {% endfor %}
+          </ul>
+  
+          {% else %}
+          <p>No weather data available for this city.</p>
+          {% endif %}
+        </div>
+      </div> <!-- **Closing left-sidebar div properly** -->
+  
+      <!-- Center Column (News Section) -->
+      <div class="center-column">
+        {% for news in news_articles %}
+        <div class="post-box">
+          <!-- Image on the left -->
+          {% if news['Image URL'] %}
+          <img src="{{ news['Image URL'] }}" alt="News Image" />
+          {% else %}
+          <img src="/static/images/default-news.jpg" alt="Default News Image" />
+          {% endif %}
+      
+          <!-- Content on the right -->
+          <div class="post-content">
+            <div class="post-title">
+              <a href="{{ news['Article URL'] }}" class="post-link" target="_blank">
+                {{ news['Title'] }}
+              </a>
+            </div>
+            <div class="post-time">{{ news['Published Date'] }}</div>
+            <div class="post-description">
+              <p>{{ news['Description'] }}</p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+       <!-- **Closing center-column div properly** -->
+    </div>
+      
+    
+    <script>
+      const cities = [
+        "Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem", "Erode", "Vellore",
+        "Tirunelveli", "Thanjavur", "Thoothukudi", "Dindigul", "Kanchipuram", "Karur", "Krishnagiri",
+        "Nagapattinam", "Namakkal", "Perambalur", "Pudukkottai", "Ramanathapuram", "Sivaganga",
+        "Theni", "Tiruppur", "Tiruvannamalai", "Viluppuram", "Virudhunagar"
+      ];
+
+      function showAllCities() {
+        let dropdown = document.getElementById("cityDropdown");
+        dropdown.innerHTML = "";
+        cities.forEach(city => {
+          let div = document.createElement("div");
+          div.textContent = city;
+          div.onclick = () => selectCity(city);
+          dropdown.appendChild(div);
+        });
+        dropdown.style.display = "block";
+      }
+
+      function filterCities() {
+        let input = document.getElementById("citySearch").value.toLowerCase();
+        let dropdown = document.getElementById("cityDropdown");
+        dropdown.innerHTML = "";
+        let filteredCities = cities.filter(city => city.toLowerCase().includes(input));
+        if (filteredCities.length > 0) {
+          filteredCities.forEach(city => {
+            let div = document.createElement("div");
+            div.textContent = city;
+            div.onclick = () => selectCity(city);
+            dropdown.appendChild(div);
+          });
+          dropdown.style.display = "block";
+        } else {
+          dropdown.style.display = "none";
+        }
+      }
+
+      function selectCity(city) {
+        document.getElementById("citySearch").value = city;
+        document.getElementById("cityDropdown").style.display = "none";
+      }
+
+      function searchWeather() {
+        let city = document.getElementById("citySearch").value;
+        if (city && cities.includes(city)) {
+          window.location.href = `/newspage?city=${city}`;
+        } else {
+          alert("Please select a valid city from the list.");
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,6 +1,11 @@
 from flask import Flask, render_template, request , jsonify
-from utils.actions import login_validation_check , selling_injection_in_mongo , generate_response , signup_mongo ,compute_plan_agri , apple_count , weed_detection , leaf_disease_detection , fetch_store_documents
+from utils.actions import login_validation_check , selling_injection_in_mongo , generate_response , signup_mongo ,compute_plan_agri , apple_count , weed_detection , leaf_disease_detection , fetch_store_documents,scrape_agriculture_news, get_weather
 import os
+from pymongo import MongoClient
+client = MongoClient("mongodb://localhost:27017/")  # Ensure MongoDB is running
+db = client.agribot 
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 app = Flask(__name__)
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
@@ -73,7 +78,14 @@ def signupprocessbuyer():
 
 @app.route("/newspage")
 def newspage():
-    return render_template("news.html")  
+    scrape_agriculture_news()
+    collection = db.news
+    city = request.args.get("city")
+    # Fetch all news articles from MongoDB
+    news_articles = list(collection.find({}, {"_id": 0})) 
+    weather_data = get_weather(city) if city else None  # Exclude _id for clean JSON
+    
+    return render_template("news1.html", news_articles=news_articles,weather_data=weather_data, city=city) 
 
 @app.route("/communicationpage")
 def communicationpage():

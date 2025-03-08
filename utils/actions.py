@@ -1,8 +1,9 @@
-import mysql.connector
-from langchain import PromptTemplate
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.llms import CTransformers , HuggingFaceHub
+import re
+from langchain_core.prompts import PromptTemplate
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_ollama import ChatOllama
+
 from langchain.chains import RetrievalQA
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_huggingface.llms import HuggingFacePipeline
@@ -13,6 +14,14 @@ import time
 from ultralytics import YOLO
 import cv2
 import matplotlib.pyplot as plt
+import ollama
+import faiss
+import requests
+from bs4 import BeautifulSoup
+from pymongo import MongoClient
+
+
+
 
 from pymongo import MongoClient 
 client = MongoClient('mongodb://localhost:27017/') 
@@ -57,89 +66,89 @@ def selling_injection_in_mongo(name, email, contact, address, product_name, prod
         return False
 
 def generate_response(user_input,type_of_llm,category):
-    if type_of_llm=='1':
+    if type_of_llm == '1':  # Agriculture RAG
+        llm = ChatOllama(model="llama3")
         PROMPT_TEMPLATE = '''
-        With the information provided try to answer the question. 
-        If you cant answer the question based on the information either say you cant find an answer or unable to find an answer.
-        So try to understand in depth about the context and answer only based on the information provided. Dont generate irrelevant answers
+        With the information provided, try to answer the question. 
+        If you cannot answer based on the information, say you are unable to find an answer.
+        Try to understand the context deeply and answer **only based on the given information**.
+        Do not generate irrelevant answers.
 
         Context: {context}
         Question: {question}
-        Do provide only helpful answers
 
         Helpful answer:
         '''
-         
         INP_VARS = ['context', 'question']
         custom_prompt_template = PromptTemplate(
-            template = PROMPT_TEMPLATE,
-            input_variables = INP_VARS
+            template=PROMPT_TEMPLATE,
+            input_variables=INP_VARS
         )
-        llm = CTransformers(
-            model = r"D:\Anurag-Agri-Bot\llms\llama-2-7b-chat.ggmlv3.q4_1.bin",
-            model_type="llama",
-            max_new_tokens = 512,
-            temperature = 0.1,
-            callbacks=[StreamingStdOutCallbackHandler()],
-            gpu_layers=0
-        )
+
+        # Load FAISS embeddings
         hfembeddings = HuggingFaceEmbeddings(
-            model_name = "thenlper/gte-large",
-            model_kwargs = {'device':'cuda'}
+            model_name="thenlper/gte-large",
+            model_kwargs={'device': 'cpu'}
         )
-        vector_db = FAISS.load_local(r"D:\Anurag-Agri-Bot\datas\faiss\agri_data/", hfembeddings,allow_dangerous_deserialization=True)
+        vector_db = FAISS.load_local(
+            r"P:/college stuffs/mini project/Agri-Hub - Copy/datas/faiss/agri_data/",
+            hfembeddings,
+            allow_dangerous_deserialization=True
+        )
+
+        # Retrieval Chain using Ollama
         retrieval_qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
+            llm=llm,  # Pass the ChatOllama instance instead of a lambda function
             chain_type="stuff",
-            retriever=vector_db.as_retriever(search_kwargs={'k': 1}),
+            retriever=vector_db.as_retriever(search_kwargs={'k': 5}),
             return_source_documents=True,
             chain_type_kwargs={"prompt": custom_prompt_template}
         )
+
         prompt = {'query': user_input}
         model_out = retrieval_qa_chain(prompt)
         answer = model_out['result']
         return answer
-    
 
-    elif type_of_llm=='2':
-        #web scraper rag
-
+    elif type_of_llm == '2':
+        llm = ChatOllama(model="llama3")  # Web Scraper RAG
         PROMPT_TEMPLATE = '''
-        With the information provided try to answer the question. 
-        If you cant answer the question based on the information either say you cant find an answer or unable to find an answer.
-        So try to understand in depth about the context and answer only based on the information provided. Dont generate irrelevant answers
+        With the information provided, try to answer the question. 
+        If you cannot answer based on the information, say you are unable to find an answer.
+        Try to understand the context deeply and answer **only based on the given information**.
+        Do not generate irrelevant answers.
 
         Context: {context}
         Question: {question}
-        Do provide only helpful answers
 
         Helpful answer:
         '''
         INP_VARS = ['context', 'question']
         custom_prompt_template = PromptTemplate(
-            template = PROMPT_TEMPLATE,
-            input_variables = INP_VARS
+            template=PROMPT_TEMPLATE,
+            input_variables=INP_VARS
         )
-        llm = CTransformers(
-            model = r"D:\Anurag-Agri-Bot\llms\llama-2-7b-chat.ggmlv3.q4_1.bin",
-            model_type="llama",
-            max_new_tokens = 512,
-            temperature = 0.1,
-            callbacks=[StreamingStdOutCallbackHandler()],
-            gpu_layers=0
-        )
+
+        # Load FAISS embeddings
         hfembeddings = HuggingFaceEmbeddings(
-            model_name = "thenlper/gte-large",
-            model_kwargs = {'device':'cuda'}
+            model_name="thenlper/gte-large",
+            model_kwargs={'device': 'cuda'}
         )
-        vector_db = FAISS.load_local(r"D:\Anurag-Agri-Bot\datas\faiss\custum_website/", hfembeddings,allow_dangerous_deserialization=True)
+        vector_db = FAISS.load_local(
+            r"P:/college stuffs/mini project/Agri-Hub - Copy/datas/faiss/newweb-data/",
+            hfembeddings,
+            allow_dangerous_deserialization=True
+        )
+
+        # Retrieval Chain using Ollama
         retrieval_qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
+            llm=llm,  # Pass the ChatOllama instance instead of a lambda function
             chain_type="stuff",
-            retriever=vector_db.as_retriever(search_kwargs={'k': 1}),
+            retriever=vector_db.as_retriever(search_kwargs={'k': 5}),
             return_source_documents=True,
             chain_type_kwargs={"prompt": custom_prompt_template}
         )
+
         prompt = {'query': user_input}
         model_out = retrieval_qa_chain(prompt)
         answer = model_out['result']
@@ -224,12 +233,12 @@ def generate_response(user_input,type_of_llm,category):
         #general chatbot
 
         llm = HuggingFacePipeline.from_model_id(
-            model_id="siddharth-magesh/Tiny-Llama-Agri-Bot",
-            task="text-generation",
-            pipeline_kwargs={
+    model_id="siddharth-magesh/Tiny-Llama-Agri-Bot",
+    task="text-generation",
+    pipeline_kwargs={
                 "temperature": 0.3,
                 "max_new_tokens": 256,
-                "min_length": 16,  # Ensure a minimum length
+                "min_length": 32,  # Ensure a minimum length
                 "do_sample": True,
                 "num_beams": 5,
                 "repetition_penalty": 2.0,  # Penalize repetition
@@ -237,11 +246,20 @@ def generate_response(user_input,type_of_llm,category):
             },
             device = 0,
         )
-        template = """ Question: {question} Answer the following question ###Answer : """
-        prompt = PromptTemplate(template=template,input_variables=["question"])
+        template = """Question: {question} ###Answer: """
+        prompt = PromptTemplate(template=template, input_variables=["question"])
         llm_chain = LLMChain(prompt=prompt, llm=llm)
-        x=llm_chain.run(user_input)
-        return x
+        x = llm_chain.run({"question": user_input})
+
+
+        if "###Answer:" in x:
+            x = x.split("###Answer:")[1].strip()
+
+# Keep only the first complete sentence
+        answer = x.split(".")[0] + "."
+
+        return answer
+
 
 def signup_mongo(name, mobile_number, password, address, gender, age, dateofbirth, email, blood_group, unique_id, state, country):
 
@@ -267,35 +285,28 @@ def signup_mongo(name, mobile_number, password, address, gender, age, dateofbirt
         print(f"Error during signup: {e}")
 
 
-def compute_plan_agri(landMeasurements,budget,machinery,labours,soilType,irrigationMethod,storageFacilities):
-    llm = HuggingFacePipeline.from_model_id(
-        model_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        task="text-generation",
-        pipeline_kwargs={
-            "temperature": 0.3,
-            "max_new_tokens": 256,
-            "min_length": 16,  # Ensure a minimum length
-            "do_sample": True,
-            "num_beams": 5,
-            "repetition_penalty": 2.0,  # Penalize repetition
-            "no_repeat_ngram_size": 3,   # Use beam search for better long outputs
-        },
-        device = 0,
-    )
-    template = """You are a agricultural chatbot which summarizes a work plan by going through the following details
-    landMeasurements : {landMeasurements}
-    budget : {budget}
-    machinery : {machinery}
-    labours : {labours}
-    soilType : {soilType}
-    irrigationMethod : {irrigationMethod}
-    storageFacilities : {storageFacilities}
-    generate a detailed work plan by using these informations
-      """
-    prompt = PromptTemplate(template=template,input_variables=["landMeasurements","budget","machinery","labours","soilType","irrigationMethod","storageFacilities"])
-    llm_chain = LLMChain(prompt=prompt, llm=llm)
-    x=llm_chain.run(landMeasurements=landMeasurements,budget=budget,machinery=machinery,labours=labours,soilType=soilType,irrigationMethod=irrigationMethod,storageFacilities=storageFacilities)
-    return x
+import ollama
+
+def compute_plan_agri(landMeasurements, budget, machinery, labours, soilType, irrigationMethod, storageFacilities):
+    prompt = f"""
+    You are an agricultural AI assistant. Based on the following details, generate a detailed agricultural work plan:
+
+    - **Land Measurements:** {landMeasurements} in acres
+    - **Budget:** {budget} in ruppees
+    - **Machinery Available:** {machinery}
+    - **Number of Labours:** {labours}
+    - **Soil Type:** {soilType}
+    - **Irrigation Method:** {irrigationMethod}
+    - **Storage Facilities:** {storageFacilities}
+
+    Provide a structured work plan, including crop selection, timeline, resource allocation, and best practices.
+    """
+
+    response = ollama.chat(model="llama3", messages=[{"role": "user", "content": prompt}])
+
+    text= response["message"]["content"]
+    cleaned_text = re.sub(r'\*+', '', text)  # Remove all occurrences of "*"
+    return cleaned_text.strip()
 
 def apple_count(video_path):
     model = YOLO(r'yolo\appledetection\best.pt')
@@ -439,3 +450,94 @@ def fetch_store_documents():
     collection = db['store']
     documents = collection.find()
     return list(documents)
+
+
+def scrape_agriculture_news( ):
+    # MongoDB Connection
+    max_pages=5
+    url="https://economictimes.indiatimes.com/news/economy/agriculture?from=mdr"
+    client = MongoClient("mongodb://localhost:27017/")  # Update if needed
+    db = client.agribot  # Database: agribot
+    collection = db.news  # Collection: news
+
+    # Delete existing news collection before inserting fresh data
+    collection.drop()
+    print("Old news collection deleted. Starting fresh scrape...")
+
+    page = 1
+    while page <= max_pages:
+        print(f"Fetching page {page}...")
+
+        # Fetch the webpage content
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            print("Failed to fetch the webpage")
+            break
+
+        # Parse the HTML content
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Find all news articles in "eachStory" divs
+        articles = soup.find_all('div', class_='eachStory')
+
+        for article in articles:
+            # Extract Article URL (from any <a> tag inside "eachStory")
+            anchor_tag = article.find('a')
+            article_url = anchor_tag['href'] if anchor_tag and anchor_tag.has_attr('href') else None
+            if article_url and not article_url.startswith("http"):
+                article_url = "https://economictimes.indiatimes.com" + article_url
+
+            # Extract Image URL (from <span class="imgContainer"> > <img>)
+            img_tag = article.find('span', class_='imgContainer')
+            img_url = img_tag.find('img')['src'] if img_tag and img_tag.find('img') else None
+
+            # Extract Title (from <h3> tag)
+            title_tag = article.find('h3')
+            title = title_tag.text.strip() if title_tag else None
+
+            # Extract Published Date (from <time> tag)
+            time_tag = article.find('time')
+            published_date = time_tag.text.strip() if time_tag else None
+
+            # Extract Description (from <p> tag)
+            description_tag = article.find('p')
+            description = description_tag.text.strip() if description_tag else None
+
+            # Create a document for MongoDB
+            news_document = {
+                "Article URL": article_url,
+                "Image URL": img_url,
+                "Title": title,
+                "Published Date": published_date,
+                "Description": description
+            }
+
+            # Insert into MongoDB
+            collection.insert_one(news_document)
+            print(f"Inserted: {title}")
+
+        # Check for pagination (Modify if there's a "Load More" button)
+        next_page_link = soup.find('a', class_='next')  # Adjust class name if different
+        if next_page_link and next_page_link.has_attr('href'):
+            url = "https://economictimes.indiatimes.com" + next_page_link['href']
+        else:
+            break  # Stop if no more pages
+
+        page += 1  # Increment page count
+
+
+
+def get_weather(city):
+    API_KEY = "sk-live-cBqopiU5Z6xpwEFdYmz60fRzfqGong7ZKfevGYHp"
+    BASE_URL = "https://weather.indianapi.in/india/weather"
+    url = f"{BASE_URL}?city={city}"
+    headers = {"x-api-key": API_KEY}
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return None
