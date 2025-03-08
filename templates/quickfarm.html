@@ -104,6 +104,42 @@
           required
         ></textarea>
 
+        <!-- New Field: Water Availability -->
+        <label for="waterAvailability">Water Availability:</label>
+<select id="waterAvailability" name="waterAvailability" required>
+  <option value="">Select an option</option>
+  <option value="borewell">Borewell</option>
+  <option value="rain-fed">Rain-fed</option>
+  <option value="canal">Canal Water</option>
+  <option value="river">River Water</option>
+  <option value="lake-pond">Lake/Pond Water</option>
+  <option value="tube-well">Tube Well</option>
+  <option value="municipal">Municipal Water Supply</option>
+  <option value="drip-tank">Drip Irrigation with Tank Storage</option>
+  <option value="rainwater-harvesting">Rainwater Harvesting</option>
+  <option value="spring">Spring Water</option>
+</select>
+
+
+<label for="waterQuantity">Average Water Quantity (Liters per Day):</label>
+<input 
+  type="number" 
+  id="waterQuantity" 
+  name="waterQuantity" 
+  min="0" 
+  placeholder="Enter water quantity in liters" 
+  required 
+/>
+
+        <!-- New Field: Organic vs. Non-Organic Farming -->
+        <label for="organicFarming">Farming Type:</label>
+        <select id="organicFarming" name="organicFarming" required>
+          <option value="">Select an option</option>
+          <option value="organic">Organic</option>
+          <option value="non-organic">Non-Organic</option>
+          <option value="mixed">Mixed</option>
+        </select>
+
         <button type="submit">Submit</button>
       </form>
     </div>

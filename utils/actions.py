@@ -23,7 +23,6 @@ from pymongo import MongoClient
 
 
 
-from pymongo import MongoClient 
 client = MongoClient('mongodb://localhost:27017/') 
 db = client['agribot']
 
@@ -43,7 +42,7 @@ def login_validation_check(number, password, type):
     else:
         return False 
         
-def selling_injection_in_mongo(name, email, contact, address, product_name, product_type, quantity, price, description, image_path): 
+def selling_injection_in_mongo(name, email, contact, address, product_name, product_type, quantity, price, description, image_paths): 
     collection = db['store']  
     selling_data = {
         "name": name,
@@ -52,7 +51,7 @@ def selling_injection_in_mongo(name, email, contact, address, product_name, prod
         "locality_address": address,
         "product_name": product_name,
         "product_quantity": quantity,
-        "image_path": image_path,
+        "image_path": image_paths,
         "price": price,
         "description": description,
         "product_category": product_type
@@ -261,10 +260,18 @@ def generate_response(user_input,type_of_llm,category):
         return answer
 
 
-def signup_mongo(name, mobile_number, password, address, gender, age, dateofbirth, email, blood_group, unique_id, state, country):
+def signup_mongo(name, mobile_number, password, address, gender, age, dateofbirth, email, blood_group, unique_id, state, country, type):
+    if type=="farmer":
+        collection = db['farmer_details'] 
+    else:
+        collection=db["buyer_details"]
 
-    collection = db['farmer_details'] 
-    farmer_data = {
+    existing_user = collection.find_one({"mobile_number": mobile_number})
+    
+    if existing_user:
+        return {"status": "error", "message": "Mobile number already registered!"}
+    
+    user_data = {
         "name": name,
         "mobile_number": mobile_number,
         "password": password,
@@ -279,13 +286,12 @@ def signup_mongo(name, mobile_number, password, address, gender, age, dateofbirt
         "country": country
     }
     try:
-        collection.insert_one(farmer_data)  
+        collection.insert_one(user_data)  
         print("Signup successful!")
     except Exception as e:
         print(f"Error during signup: {e}")
 
 
-import ollama
 
 def compute_plan_agri(landMeasurements, budget, machinery, labours, soilType, irrigationMethod, storageFacilities):
     prompt = f"""

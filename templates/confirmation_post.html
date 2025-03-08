@@ -15,93 +15,121 @@
         margin: 0;
         background-color: #f9f9f9;
       }
-      .product-box {
+      .container {
         background-color: #fff;
-        border: 1px solid #ddd;
+        padding: 20px;
         border-radius: 5px;
-        padding: 10px;
-        margin: 10px 0;
-        width: 250px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        width: 300px;
       }
-      .product-box form {
-        display: flex;
-        flex-direction: column;
+      .form-group {
+        margin-bottom: 10px;
       }
-      .product-box label {
-        margin-bottom: 3px;
+      label {
         font-weight: bold;
-        font-size: 12px;
+        font-size: 14px;
+        display: block;
       }
-      .product-box input {
-        margin-bottom: 8px;
+      input, textarea {
+        width: 100%;
         padding: 6px;
         border: 1px solid #ddd;
         border-radius: 3px;
-        font-size: 12px;
+        font-size: 14px;
       }
-      .success-message {
-        background-color: #dff0d8;
-        color: #3c763d;
-        border: 1px solid #d6e9c6;
+      textarea {
+        resize: vertical;
+      }
+      .image-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .image-preview img {
+        width: 80px;
+        height: 80px;
         border-radius: 5px;
-        padding: 15px;
-        margin-top: 20px;
-        text-align: center;
-        width: 250px;
+        object-fit: cover;
+        border: 1px solid #ddd;
+      }
+      .btn {
+        background-color: #28a745;
+        color: #fff;
+        border: none;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 10px;
+      }
+      .btn:hover {
+        background-color: #218838;
       }
     </style>
   </head>
   <body>
-    <div class="product-box">
-      <form>
-        <label for="productName1">Product Name</label>
-        <input
-          type="text"
-          id="productName1"
-          name="productName1"
-          value="{{ product_name }}"
-          readonly
-        />
+    <div class="container">
+      <h2>Product Details</h2>
+      <form action="{{ url_for('update_product') }}" method="POST">
+        
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" value="{{ name }}" required />
+        </div>
 
-        <label for="quantity1">Quantity</label>
-        <input
-          type="number"
-          id="quantity1"
-          name="quantity1"
-          value="{{ quantity }}"
-          readonly
-        />
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" value="{{ email }}" required />
+        </div>
 
-        <label for="price1">Price</label>
-        <input
-          type="number"
-          id="price1"
-          name="price1"
-          value="{{ price }}"
-          readonly
-        />
+        <div class="form-group">
+          <label for="contact">Contact Number</label>
+          <input type="tel" id="contact" name="contact" value="{{ contact }}" pattern="[0-9]{10}" required />
+        </div>
 
-        <label for="locality1">Locality</label>
-        <input
-          type="text"
-          id="locality1"
-          name="locality1"
-          value="{{ address }}"
-          readonly
-        />
+        <div class="form-group">
+          <label for="address">Locality Address</label>
+          <textarea id="address" name="address" rows="2" required>{{ address }}</textarea>
+        </div>
 
-        <label for="farmerId1">Farmer ID</label>
-        <input
-          type="text"
-          id="farmerId1"
-          name="farmerId1"
-          value="{{ unique_id }}"
-          readonly
-        />
+        <div class="form-group">
+          <label for="product_name">Product Name</label>
+          <input type="text" id="product_name" name="product_name" value="{{ product_name }}" required />
+        </div>
+
+        <div class="form-group">
+          <label for="product_type">Product Type</label>
+          <input type="text" id="product_type" name="product_type" value="{{ product_type }}" required />
+        </div>
+
+        <div class="form-group">
+          <label for="quantity">Quantity</label>
+          <input type="number" id="quantity" name="quantity" value="{{ quantity }}" required />
+        </div>
+
+        <div class="form-group">
+          <label for="price">Price</label>
+          <input type="number" id="price" name="price" value="{{ price }}" required />
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="2" required>{{ description }}</textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Uploaded Images</label>
+          <div class="image-preview">
+            {% for image in image_paths %}
+              <img src="{{ image }}" alt="Product Image">
+            {% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn">Save Changes</button>
       </form>
     </div>
-
-    <div class="success-message">Your product has been posted successfully</div>
   </body>
 </html>

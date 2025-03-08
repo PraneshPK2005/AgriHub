@@ -71,12 +71,18 @@
       .submit-btn:hover {
         background-color: #218838;
       }
-      .image-preview {
-        width: 100%;
-        height: auto;
+      .image-preview-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
         margin-top: 10px;
-        display: none;
+      }
+      .image-preview {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
         border-radius: 5px;
+        display: none;
       }
     </style>
   </head>
@@ -93,25 +99,19 @@
       >
         <div class="form-group">
           <label for="name">Name</label>
-          <input type="text" id="name" name="name" required />
+          <input type="text" id="name" name="name" value="{{ name }}" required />
         </div>
         <div class="form-group">
           <label for="email">Email ID</label>
-          <input type="email" id="email" name="email" required />
+          <input type="email" id="email" name="email" value="{{ email }}" required />
         </div>
         <div class="form-group">
           <label for="contact">Contact Number</label>
-          <input
-            type="tel"
-            id="contact"
-            name="contact"
-            pattern="[0-9]{10}"
-            required
-          />
+          <input type="tel" id="contact" name="contact" value="{{ contact }}" pattern="[0-9]{10}" required />
         </div>
         <div class="form-group">
           <label for="address">Locality Address</label>
-          <textarea id="address" name="address" rows="3" required></textarea>
+          <textarea id="address" name="address" rows="3" required>{{ address }}</textarea>
         </div>
         <div class="form-group">
           <label for="productName">Product Name</label>
@@ -140,18 +140,19 @@
           <input type="text" id="description" name="description" required />
         </div>
         
-        <!-- Image Upload Field -->
+        <!-- Multiple Image Upload Field -->
         <div class="form-group">
-          <label for="productImage">Product Image</label>
+          <label for="productImages">Product Images</label>
           <input
             type="file"
-            id="productImage"
-            name="productImage"
+            id="productImages"
+            name="productImages"
             accept="image/*"
+            multiple
             required
-            onchange="previewImage(event)"
+            onchange="previewImages(event)"
           />
-          <img id="imagePreview" class="image-preview" />
+          <div id="imagePreviewContainer" class="image-preview-container"></div>
         </div>
 
         <button type="submit" class="submit-btn">Submit</button>
@@ -159,18 +160,24 @@
     </div>
 
     <script>
-      function previewImage(event) {
-        const imagePreview = document.getElementById("imagePreview");
-        const file = event.target.files[0];
+      function previewImages(event) {
+        const container = document.getElementById("imagePreviewContainer");
+        container.innerHTML = ""; // Clear previous previews
 
-        if (file) {
+        const files = event.target.files;
+        if (files.length === 0) return;
+
+        Array.from(files).forEach((file) => {
           const reader = new FileReader();
           reader.onload = function (e) {
-            imagePreview.src = e.target.result;
-            imagePreview.style.display = "block";
+            const img = document.createElement("img");
+            img.src = e.target.result;
+            img.className = "image-preview";
+            img.style.display = "block";
+            container.appendChild(img);
           };
           reader.readAsDataURL(file);
-        }
+        });
       }
     </script>
   </body>
