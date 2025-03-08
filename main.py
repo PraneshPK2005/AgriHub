@@ -1,10 +1,15 @@
-from flask import Flask, render_template, request , jsonify, session, app, Response
+from flask import Flask, render_template, request , jsonify, session, app, Response, send_from_directory
 from utils.actions import login_validation_check , selling_injection_in_mongo , generate_response , signup_mongo ,compute_plan_agri , apple_count , weed_detection , leaf_disease_detection , fetch_store_documents,scrape_agriculture_news, get_weather
 import os
 from pymongo import MongoClient
 import ollama
 import time
 from datetime import datetime
+from werkzeug.utils import secure_filename
+import base64
+from ultralytics import YOLO
+import numpy as np
+import cv2
 client = MongoClient("mongodb://localhost:27017/")  # Ensure MongoDB is running
 db = client["agribot"]
 
@@ -145,22 +150,24 @@ def storepage():
 
     products = fetch_store_documents()
 
-    # Ensure image_path is properly formatted
     for product in products:
-        if 'image_path' in product and product['image_path']:  # Check if image exists
-            product['image_path'] = product['image_path']
+        # Handle different types of image_path (single string or list)
+        if isinstance(product.get('image_path'), list) and product['image_path']:
+            product['image_path'] = product['image_path']  # Use all images in the list
+        elif isinstance(product.get('image_path'), str) and product['image_path']:
+            product['image_path'] = [product['image_path']]  # Convert single string to list
         else:
-            product['image_path'] = '/static/uploads/default.jpg'  # Fallback image
+            product['image_path'] = ['/static/uploads/default.jpg']  # Fallback image
 
-        # Ensure price is stored as a float for proper sorting
+        # Convert price to float for sorting
         try:
             product['price'] = float(product['price'])
         except ValueError:
-            product['price'] = 0.0  # If conversion fails, set default price
+            product['price'] = 0.0
 
     # Apply category filter
     if category_filter != 'all':
-        products = [p for p in products if p['product_category'].lower() == category_filter.lower()]
+        products = [p for p in products if p['product_type'].lower() == category_filter.lower()]
 
     # Apply search filter
     if search_term:
@@ -180,8 +187,6 @@ def storepage():
         products.sort(key=lambda p: p['product_name'].lower(), reverse=True)
 
     return render_template("store.html", products=products, search_term=search_term, category_filter=category_filter, sort_by=sort_by)
-
-
 
 
 @app.route("/quickstartpage")
@@ -401,41 +406,89 @@ def update_product():
 def cvpage():
     return render_template("cv.html")
 
-@app.route('/leafbase', methods=['GET', 'POST'])
-def leafbase():
-    if request.method == 'POST':
-        file = request.files['image']
-        if file:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(filepath)
-            # Call the leaf model function here
-            result = leaf_disease_detection(filepath)
-            return render_template('leafresult.html', result=result)
-    return render_template('upload_form.html', task='leaf')
+@app.route("/upload", methods=['GET', 'POST'])
+def upload_page():
+    task = request.args.get("task")
+    result = None
+    image_path = None
 
-@app.route('/weedbase', methods=['GET', 'POST'])
-def weedbase():
     if request.method == 'POST':
-        file = request.files['image']
-        if file:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        if 'file' in request.files and request.files['file'].filename:
+            file = request.files['file']
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
-            # Call the leaf model function here
-            result = weed_detection(filepath)
-            return render_template('weedresult.html', result=result)
-    return render_template('upload_form.html', task='weed')
+        elif request.form.get("imageData"):
+            image_data = request.form["imageData"]
+            image_binary = base64.b64decode(image_data.split(",")[1])
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], "captured_photo.png")
+            with open(filepath, "wb") as f:
+                f.write(image_binary)
+        else:
+            return "No valid file or camera input", 400
 
-@app.route('/countbase', methods=['GET', 'POST'])
-def countbase():
-    if request.method == 'POST':
-        file = request.files['image']
-        if file:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(filepath)
-            # Call the leaf model function here
+        # Process image and get the result
+        if task == "leaf":
+            result, image_path = leaf_disease_detection(filepath)
+        elif task == "weed":
+            result, image_path = weed_detection(filepath)
+        elif task == "count":
             result = apple_count(filepath)
-            return render_template('countresult.html', result=result)
-    return render_template('upload_form.html', task='count')
+        else:
+            result = ["Invalid task!"]
+
+        # Debugging: Print the result type
+        print(f"DEBUG: Result Type: {type(result)}, Result Value: {result}")
+
+        # Ensure result is a list before joining
+        if result is None:
+            result = ["No detection result"]
+        elif isinstance(result, str):  # Convert a single string to a list
+            result = [result]
+        elif not isinstance(result, (list, tuple)):  # Ensure it's iterable
+            result = [str(result)]
+
+    return render_template("upload_form.html", task=task, result=result, image_path=image_path)
+
+
+models = {
+    "leaf": YOLO("yolo/plantdiseasedetection/best.pt"),
+    "weed": YOLO("yolo/weeddetection/last.pt"),
+    "count": YOLO("yolo/appledetection/best.pt")
+}
+
+@app.route("/video_feed", methods=['POST'])
+def video_feed():
+    task = request.args.get("task")
+    if task not in models:
+        return jsonify({"error": "Invalid task"}), 400
+
+    model = models[task]
+    
+    # Decode the frame
+    frame_data = request.json.get("frame")
+    if not frame_data:
+        return jsonify({"error": "No frame data received"}), 400
+
+    frame_bytes = base64.b64decode(frame_data.split(",")[1])
+    np_arr = np.frombuffer(frame_bytes, np.uint8)
+    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    # Run YOLO inference
+    results = model(frame)
+    
+    # Process results
+    detections = []
+    for r in results:
+        for box in r.boxes:
+            cls = int(box.cls[0])  # Class index
+            conf = float(box.conf[0])  # Confidence
+            detections.append({"class": model.names[cls], "confidence": round(conf, 2)})
+
+    return jsonify({"prediction": detections if detections else "No detection"})
+
+
+
 
 @app.route('/chatprocess', methods=['POST'])
 def chatprocess():

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Upload</title>
+    <title>Weed Detection - Capture Image/Video</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,40 +17,111 @@
         }
         .upload-container {
             background: white;
-            padding: 40px;
+            padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             text-align: center;
-            width: 400px;
+            width: 450px;
         }
         .upload-container h1 {
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
-        .upload-container input[type="file"] {
-            display: block;
-            margin: 20px auto 30px;
+        video, canvas {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 10px;
         }
-        .upload-container button {
+        .btn-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        button {
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 15px 30px;
+            padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
         }
-        .upload-container button:hover {
+        button:hover {
             background-color: #0056b3;
         }
     </style>
 </head>
 <body>
     <div class="upload-container">
-        <h1>Upload an Image for Weed Detection</h1>
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="image" accept="image/*" required>
-            <button type="submit">Submit</button>
-        </form>
+        <h1>Capture Image or Video</h1>
+        <video id="video" autoplay></video>
+        <canvas id="canvas" style="display: none;"></canvas>
+        <input type="file" id="fileInput" accept="image/*,video/*" style="display: none;">
+        
+        <div class="btn-container">
+            <button id="capture">Take Photo</button>
+            <button id="record">Record Video</button>
+            <button id="upload">Upload</button>
+        </div>
     </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureButton = document.getElementById('capture');
+        const recordButton = document.getElementById('record');
+        const uploadButton = document.getElementById('upload');
+        let mediaRecorder, recordedChunks = [];
+
+        // Access Camera
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                video.srcObject = stream;
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: "video/mp4" });
+                    uploadMedia(blob, "video.mp4");
+                };
+            })
+            .catch(err => console.error("Error accessing camera:", err));
+
+        // Capture Photo
+        captureButton.addEventListener('click', () => {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => uploadMedia(blob, "photo.png"), "image/png");
+        });
+
+        // Record Video
+        recordButton.addEventListener('click', () => {
+            if (mediaRecorder.state === "inactive") {
+                recordedChunks = [];
+                mediaRecorder.start();
+                recordButton.textContent = "Stop Recording";
+            } else {
+                mediaRecorder.stop();
+                recordButton.textContent = "Record Video";
+            }
+        });
+
+        // Upload to Flask Backend
+        function uploadMedia(blob, filename) {
+            const formData = new FormData();
+            formData.append("file", blob, filename);
+
+            fetch("/weedbase", { method: "POST", body: formData })
+                .then(response => response.text())
+                .then(result => alert("Upload Successful: " + result))
+                .catch(error => console.error("Upload Error:", error));
+        }
+    </script>
 </body>
 </html>

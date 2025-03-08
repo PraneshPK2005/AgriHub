@@ -19,6 +19,7 @@ import faiss
 import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
+import os
 
 
 
@@ -350,107 +351,78 @@ def apple_count(video_path):
         # Write the frame with bounding boxes and apple count
         out.write(frame)
         ret, frame = cap.read()
-    cap.release()
+    
     out.release()
     cv2.destroyAllWindows()
     return(max_apple_count)
 
+
+UPLOAD_FOLDER = "static/uploads"
 # Perform inference
 def leaf_disease_detection(image_path):
-    #Define the class names
     class_names = [
-        'Hawar_Daun', 'Virus_Kuning_Keriting', 'Hangus_Daun','Defisiensi_Kalsium', 'Bercak_Daun', 'Yellow_Vein_Mosaic_Virus'
+        'Hawar_Daun', 'Virus_Kuning_Keriting', 'Hangus_Daun',
+        'Defisiensi_Kalsium', 'Bercak_Daun', 'Yellow_Vein_Mosaic_Virus'
     ]
 
-    # Load the YOLO model
     model = YOLO(r"yolo\plantdiseasedetection\best.pt")
-    # Load image
     img = cv2.imread(image_path)
-    # Perform inference
-    results = model(img)
     
-    # Check the structure of the results
-    if not results:
-        print("No results found.")
-        return
-    
-    # Extract bounding boxes, class ids, and confidence scores
-    for result in results:
-        boxes = result.boxes.xyxy.cpu().numpy()
-        class_ids = result.boxes.cls.cpu().numpy().astype(int)
-        confidences = result.boxes.conf.cpu().numpy()
+    if img is None:
+        return None, None  # Handle case where image is not read properly
 
-        # Draw bounding boxes and labels on the image
+    results = model(img)
+    detected_diseases = []  # Store all detected diseases
+
+    for result in results:
+        boxes = result.boxes.xyxy.cpu().numpy() if result.boxes is not None else []
+        class_ids = result.boxes.cls.cpu().numpy().astype(int) if result.boxes is not None else []
+        confidences = result.boxes.conf.cpu().numpy() if result.boxes is not None else []
+
         for box, class_id, confidence in zip(boxes, class_ids, confidences):
             label = f"{class_names[class_id]} {confidence:.2f}"
+            detected_diseases.append(label)
+
             x1, y1, x2, y2 = map(int, box)
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            
 
-    # Convert BGR image to RGB for displaying with matplotlib
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    
-    leaf_predicted=class_names[class_id]
-    return(leaf_predicted)
+    output_path = os.path.join(UPLOAD_FOLDER, "result_leaf.png")
+    cv2.imwrite(output_path, img)
 
-# Replace 'path/to/your/image.jpg' with the path to your image
+    return detected_diseases if detected_diseases else ["No disease detected"], output_path
 
-# Perform inference
 
 def weed_detection(image_path):
-    # Define the class names
     class_names = [
-        "Carpetweeds",
-        "Crabgrass",
-        "Eclipta",
-        "Goosegrass",
-        "Morningglory",
-        "Nutsedge",
-        "Palmeramaranth",
-        "Pricklysida",
-        "Purslane",
-        "Ragweed",
-        "Sicklepod",
-        "Spottedspurge",
-        "Spurredanoda",
-        "Swinecress",
-        "Waterhemp"
+        "Carpetweeds", "Crabgrass", "Eclipta", "Goosegrass", "Morningglory",
+        "Nutsedge", "Palmeramaranth", "Pricklysida", "Purslane", "Ragweed",
+        "Sicklepod", "Spottedspurge", "Spurredanoda", "Swinecress", "Waterhemp"
     ]
 
-    # Load the YOLO model
     model = YOLO(r"yolo\weeddetection\last.pt")
-
-    # Perform inference
-    # Load image
     img = cv2.imread(image_path)
-    # Perform inference
     results = model(img)
-    
-    # Check the structure of the results
+
     if not results:
-        print("No results found.")
-        return
-    
-    # Extract bounding boxes, class ids, and confidence scores
+        return None, None
+
     for result in results:
         boxes = result.boxes.xyxy.cpu().numpy()
         class_ids = result.boxes.cls.cpu().numpy().astype(int)
         confidences = result.boxes.conf.cpu().numpy()
 
-        # Draw bounding boxes and labels on the image
         for box, class_id, confidence in zip(boxes, class_ids, confidences):
             label = f"{class_names[class_id]} {confidence:.2f}"
             x1, y1, x2, y2 = map(int, box)
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            
 
-    # Convert BGR image to RGB for displaying with matplotlib
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    
-    weed_predicted=class_names[class_id]
-    return(weed_predicted)
+    # Save the processed image
+    output_path = os.path.join(UPLOAD_FOLDER, "result_weed.png")
+    cv2.imwrite(output_path, img)
+
+    return class_names[class_id], output_path
 
 def fetch_store_documents():
     collection = db['store']

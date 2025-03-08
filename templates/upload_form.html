@@ -3,14 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload & Live Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { padding: 0; margin: 0; box-sizing: border-box; }
+        body {
+            background-color: #8DECB4;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+        .container {
+            display: flex;
+            justify-content: space-around;
+            width: 90%;
+            max-width: 1200px;
+        }
+        .section {
+            width: 45%;
+            background: #FEFBF3;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover { background-color: #45a049; }
+        video, img {
+            width: 100%;
+            max-height: 300px;
+            margin-top: 10px;
+        }
+        .hidden { display: none; }
+    </style>
 </head>
-    <body>
-        <div class="upload-container">
-        <h1>Upload an Image/Video for {{task}}</h1>
-        <form action="/{{task}}base" method="post" enctype="multipart/form-data">
-            <input type="file" name="image" accept="image/*, video/*" required>
-            <button type="submit">Submit</button>
-            
-        </form>
+<body>
+
+    <h1>AI Detection System</h1>
+    <div class="container">
+
+        <!-- Upload Section -->
+        <div class="section">
+            <h2>Upload File for {{ task | capitalize }}</h2>
+            <form action="{{ url_for('upload_page', task=task) }}" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" accept="image/*,video/*" id="fileInput" required>
+                <button type="submit">Upload</button>
+            </form>
+
+            <!-- Preview Uploaded Image -->
+            <img id="uploadedImage" class="hidden">
+            <video id="uploadedVideo" controls class="hidden"></video>
+
+            {% if result %}
+<div class="result">
+    <h3>Result:</h3>
+    <p>Detected: {{ result }}</p>
+    {% if image_path %}
+        <img src="{{ url_for('static', filename=image_path.split('/')[-1]) }}" alt="Processed Result">
+    {% endif %}
+</div>
+{% endif %}
+
+
         </div>
-    </body>
+
+        <!-- Live Detection Section -->
+        <div class="section">
+            <h2>Live Detection</h2>
+            <button id="startLive">Start Live Feed</button>
+            <video id="videoElement" autoplay class="hidden"></video>
+            <div id="liveResult"></div>
+        </div>
+
+    </div>
+
+    <script>
+        let videoStream = null;
+        let videoElement = document.getElementById("videoElement");
+        let startLiveBtn = document.getElementById("startLive");
+        let liveResultDiv = document.getElementById("liveResult");
+        let uploadedImage = document.getElementById("uploadedImage");
+        let uploadedVideo = document.getElementById("uploadedVideo");
+        let intervalId = null;
+
+        // File Upload Preview
+        document.getElementById("fileInput").addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fileURL = URL.createObjectURL(file);
+            if (file.type.startsWith("image")) {
+                uploadedImage.src = fileURL;
+                uploadedImage.classList.remove("hidden");
+                uploadedVideo.classList.add("hidden");
+            } else if (file.type.startsWith("video")) {
+                uploadedVideo.src = fileURL;
+                uploadedVideo.classList.remove("hidden");
+                uploadedImage.classList.add("hidden");
+            }
+        });
+
+        // Start / Stop Live Detection
+        startLiveBtn.addEventListener("click", async () => {
+            if (!videoStream) {
+                try {
+                    videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    videoElement.srcObject = videoStream;
+                    videoElement.classList.remove("hidden");
+                    startLiveBtn.innerText = "Stop Live Feed";
+                    startSendingFrames();
+                } catch (error) {
+                    alert("Camera access denied!");
+                }
+            } else {
+                stopLiveFeed();
+            }
+        });
+
+        function startSendingFrames() {
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+
+            intervalId = setInterval(async () => {
+                if (!videoStream) return;
+
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                let frameData = canvas.toDataURL("image/jpeg");
+
+                let response = await fetch("/video_feed?task={{ task }}", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ frame: frameData })
+                });
+
+                let result = await response.json();
+                liveResultDiv.innerHTML = `<h3>Detected: ${JSON.stringify(result.prediction)}</h3>`;
+            }, 500);
+        }
+
+        function stopLiveFeed() {
+            clearInterval(intervalId);
+            intervalId = null;
+
+            if (videoStream) {
+                let tracks = videoStream.getTracks();
+                tracks.forEach(track => track.stop());
+                videoStream = null;
+            }
+
+            videoElement.classList.add("hidden");
+            startLiveBtn.innerText = "Start Live Feed";
+            liveResultDiv.innerHTML = "";
+        }
+    </script>
+</body>
+</html>
